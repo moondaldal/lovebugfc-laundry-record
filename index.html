@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#a85f6d">
+  <title>러브버그FC 조끼 세탁</title>
+  <style>
+    :root {
+      --bg: #fbf4f1;
+      --surface: rgba(255, 255, 255, 0.9);
+      --surface-solid: #ffffff;
+      --ink: #332b2e;
+      --muted: #8e7d83;
+      --brand: #a85f6d;
+      --brand-dark: #844653;
+      --brand-pale: #f4dfe2;
+      --gold: #bd852f;
+      --green: #3a8669;
+      --line: rgba(88, 57, 66, 0.1);
+      --shadow: 0 18px 45px rgba(105, 62, 74, 0.1);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", sans-serif;
+      background:
+        radial-gradient(circle at 7% 3%, rgba(244, 207, 199, 0.72), transparent 26rem),
+        radial-gradient(circle at 95% 30%, rgba(226, 190, 199, 0.45), transparent 25rem),
+        var(--bg);
+      padding: max(22px, env(safe-area-inset-top)) 16px max(64px, env(safe-area-inset-bottom));
+    }
+
+    button, input, select { font: inherit; }
+    button { -webkit-tap-highlight-color: transparent; }
+
+    .app { width: min(100%, 720px); margin: 0 auto; }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 22px;
+    }
+
+    .brand { display: flex; align-items: center; gap: 12px; }
+
+    .ball {
+      width: 48px;
+      height: 48px;
+      border-radius: 16px;
+      display: grid;
+      place-items: center;
+      font-size: 25px;
+      background: var(--surface-solid);
+      box-shadow: 0 10px 25px rgba(110, 66, 78, 0.13);
+      transform: rotate(-5deg);
+    }
+
+    .eyebrow { margin: 0 0 2px; color: var(--brand); font-size: 12px; font-weight: 800; letter-spacing: 0.08em; }
+    h1 { margin: 0; font-size: clamp(22px, 6vw, 30px); letter-spacing: -0.045em; }
+
+    .sync {
+      flex: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255,255,255,.66);
+      color: var(--muted);
+      padding: 8px 11px;
+      font-size: 11px;
+      font-weight: 750;
+    }
+
+    .sync-dot { width: 7px; height: 7px; border-radius: 50%; background: #d59d41; }
+    .sync.online .sync-dot { background: #55a881; box-shadow: 0 0 0 4px rgba(85,168,129,.12); }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      border-radius: 26px;
+      padding: 24px;
+      color: white;
+      background: linear-gradient(135deg, #a85f6d 0%, #814653 100%);
+      box-shadow: 0 22px 50px rgba(122, 66, 80, 0.23);
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      width: 190px;
+      height: 190px;
+      right: -70px;
+      top: -90px;
+      border: 34px solid rgba(255,255,255,.08);
+      border-radius: 50%;
+    }
+
+    .hero-label { margin: 0 0 8px; color: rgba(255,255,255,.75); font-size: 13px; font-weight: 700; }
+    .hero-date { margin: 0; font-size: clamp(28px, 8vw, 40px); letter-spacing: -0.04em; line-height: 1.1; }
+    .hero-copy { margin: 10px 0 0; color: rgba(255,255,255,.82); font-size: 14px; }
+
+    .tabs {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      margin: 18px 0 22px;
+      padding: 5px;
+      border-radius: 15px;
+      background: rgba(255,255,255,.58);
+      border: 1px solid rgba(255,255,255,.8);
+    }
+
+    .tab {
+      border: 0;
+      border-radius: 11px;
+      background: transparent;
+      color: var(--muted);
+      padding: 10px 5px;
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .tab.active { color: var(--brand-dark); background: white; box-shadow: 0 4px 15px rgba(93,57,68,.09); }
+    .panel { display: none; }
+    .panel.active { display: block; animation: show .22s ease-out; }
+    @keyframes show { from { opacity: 0; transform: translateY(4px); } }
+
+    .section-head { display: flex; justify-content: space-between; align-items: end; gap: 12px; margin: 0 2px 11px; }
+    .section-head h2 { margin: 0; font-size: 18px; letter-spacing: -0.03em; }
+    .section-head span { color: var(--muted); font-size: 12px; }
+    .stack { display: grid; gap: 10px; }
+
+    .card {
+      border: 1px solid rgba(255,255,255,.9);
+      border-radius: 18px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+    }
+
+    .schedule-card { padding: 17px; }
+    .schedule-top { display: flex; align-items: center; gap: 13px; }
+    .schedule-fields { display: grid; gap: 8px; margin-top: 14px; }
+
+    .date-tile {
+      width: 60px;
+      height: 60px;
+      flex: none;
+      display: grid;
+      place-content: center;
+      text-align: center;
+      border-radius: 17px;
+      color: var(--brand-dark);
+      background: var(--brand-pale);
+    }
+
+    .date-tile strong { font-size: 21px; line-height: 1; }
+    .date-tile small { margin-top: 4px; font-size: 10px; font-weight: 800; }
+    .schedule-info { min-width: 0; flex: 1; }
+    .schedule-date { margin: 0 0 4px; font-size: 14px; font-weight: 850; }
+    .schedule-person { margin: 0; font-size: 17px; font-weight: 850; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .schedule-person.empty { color: var(--muted); font-weight: 650; }
+
+    .badge { flex: none; border-radius: 999px; padding: 6px 9px; font-size: 10px; font-weight: 850; }
+    .badge.wait { color: var(--brand-dark); background: var(--brand-pale); }
+    .badge.plan { color: #7a632d; background: #f5eacb; }
+    .badge.done { color: #287055; background: #dff1e9; }
+
+    .assign { display: flex; gap: 8px; margin-top: 14px; }
+    select, input[type="text"], input[type="date"] {
+      width: 100%;
+      min-width: 0;
+      border: 1px solid var(--line);
+      outline: none;
+      border-radius: 12px;
+      background: white;
+      color: var(--ink);
+      padding: 11px 12px;
+    }
+
+    select:focus, input:focus { border-color: rgba(168,95,109,.55); box-shadow: 0 0 0 3px rgba(168,95,109,.09); }
+
+    .date-picker-control {
+      width: 100%;
+      min-width: 0;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: white;
+      color: var(--ink);
+      padding: 11px 12px;
+      cursor: pointer;
+      text-align: left;
+    }
+
+    .date-picker-control:focus { outline: none; border-color: rgba(168,95,109,.55); box-shadow: 0 0 0 3px rgba(168,95,109,.09); }
+    .date-picker-icon { flex: none; font-size: 16px; }
+
+    .btn {
+      border: 0;
+      border-radius: 12px;
+      padding: 11px 14px;
+      font-weight: 800;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .btn-primary { color: white; background: var(--brand); }
+    .btn-primary:active { background: var(--brand-dark); transform: translateY(1px); }
+    .btn-soft { color: var(--brand-dark); background: var(--brand-pale); }
+    .btn-ghost { color: var(--muted); background: transparent; border: 1px solid var(--line); }
+    .btn-danger { color: white; background: #b9505f; }
+    .btn-small { padding: 8px 10px; font-size: 11px; }
+    .btn:disabled { opacity: .45; cursor: default; }
+
+    .actions { display: flex; justify-content: flex-end; gap: 7px; margin-top: 12px; }
+
+    .form-card { padding: 17px; margin-top: 18px; }
+    .form-title { margin: 0 0 10px; font-size: 13px; font-weight: 850; }
+    .form-row { display: flex; gap: 8px; }
+    .form-hint { margin: 8px 2px 0; color: var(--muted); font-size: 10px; line-height: 1.5; }
+
+    .history-card { overflow: hidden; }
+    .history-row { display: flex; align-items: center; gap: 12px; padding: 13px 16px; border-bottom: 1px solid var(--line); }
+    .history-row:last-child { border-bottom: 0; }
+    .history-date { width: 82px; flex: none; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+    .history-name { min-width: 0; flex: 1; font-size: 14px; font-weight: 800; }
+    .history-name small { display: block; margin-top: 2px; color: var(--muted); font-size: 10px; font-weight: 650; }
+    .history-actions { display: flex; align-items: center; gap: 6px; }
+
+    .rank-card { overflow: hidden; }
+    .rank-row { display: grid; grid-template-columns: 30px minmax(95px, 1fr) minmax(70px, 1.3fr) 44px; align-items: center; gap: 10px; padding: 12px 15px; border-bottom: 1px solid var(--line); }
+    .rank-row:last-child { border-bottom: 0; }
+    .rank-no { color: var(--muted); font-size: 11px; font-weight: 900; text-align: center; }
+    .rank-row:first-child .rank-no { color: var(--gold); }
+    .rank-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 750; }
+    .bar { height: 7px; border-radius: 99px; background: #f1e6e7; overflow: hidden; }
+    .bar > i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #d69ca5, var(--brand)); }
+    .rank-count { color: var(--brand-dark); font-size: 13px; font-weight: 900; text-align: right; }
+
+    .member-card { padding: 16px; }
+    .chips { display: flex; flex-wrap: wrap; gap: 7px; }
+    .chip { border: 1px solid var(--line); border-radius: 999px; background: white; padding: 7px 10px; color: #5a4d51; font-size: 12px; font-weight: 700; }
+    .member-manage { display: flex; justify-content: flex-end; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+
+    .empty-state { padding: 30px 18px; text-align: center; color: var(--muted); font-size: 13px; }
+    .note { margin: 24px 8px 0; color: var(--muted); text-align: center; font-size: 11px; line-height: 1.65; }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: max(22px, env(safe-area-inset-bottom));
+      z-index: 20;
+      transform: translate(-50%, 18px);
+      opacity: 0;
+      pointer-events: none;
+      border-radius: 999px;
+      padding: 11px 16px;
+      color: white;
+      background: rgba(48,40,43,.92);
+      box-shadow: 0 12px 35px rgba(0,0,0,.18);
+      font-size: 12px;
+      font-weight: 750;
+      transition: .22s ease;
+    }
+
+    .toast.show { transform: translate(-50%, 0); opacity: 1; }
+
+    dialog {
+      width: min(calc(100% - 28px), 430px);
+      border: 0;
+      border-radius: 22px;
+      padding: 0;
+      color: var(--ink);
+      background: white;
+      box-shadow: 0 28px 80px rgba(48, 31, 36, .28);
+    }
+
+    dialog::backdrop { background: rgba(42, 29, 33, .48); backdrop-filter: blur(3px); }
+    .modal-body { padding: 22px; }
+    .modal-title { margin: 0 0 6px; font-size: 19px; letter-spacing: -.03em; }
+    .modal-copy { margin: 0 0 16px; color: var(--muted); font-size: 12px; line-height: 1.55; }
+    .modal-field { display: grid; gap: 6px; margin-top: 12px; }
+    .modal-field label { color: var(--muted); font-size: 11px; font-weight: 800; }
+    .modal-field input, .modal-field select { width: 100%; }
+    .modal-error { min-height: 18px; margin: 8px 0 0; color: #b14c5b; font-size: 11px; font-weight: 750; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+    .hidden { display: none !important; }
+
+    .calendar-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+    .calendar-title { margin: 0; font-size: 18px; }
+    .calendar-nav { width: 38px; height: 38px; border: 1px solid var(--line); border-radius: 11px; color: var(--ink); background: white; cursor: pointer; font-size: 18px; }
+    .calendar-weekdays, .calendar-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+    .calendar-weekdays { margin-bottom: 5px; }
+    .calendar-weekdays span { padding: 5px 0; color: var(--muted); text-align: center; font-size: 10px; font-weight: 850; }
+    .calendar-weekdays span:first-child { color: #bb5967; }
+    .calendar-weekdays span:last-child { color: #4d739c; }
+    .calendar-day { aspect-ratio: 1; border: 0; border-radius: 11px; color: var(--ink); background: transparent; cursor: pointer; font-size: 13px; }
+    .calendar-day:hover { background: var(--brand-pale); }
+    .calendar-day.today { box-shadow: inset 0 0 0 1px var(--brand); color: var(--brand-dark); font-weight: 850; }
+    .calendar-day.selected { color: white; background: var(--brand); font-weight: 900; box-shadow: none; }
+    .calendar-blank { aspect-ratio: 1; }
+
+    @media (max-width: 430px) {
+      body { padding-left: 12px; padding-right: 12px; }
+      .hero { padding: 21px; }
+      .sync span:last-child { display: none; }
+      .assign, .form-row { align-items: stretch; }
+      .rank-row { grid-template-columns: 24px minmax(86px, 1.2fr) minmax(55px, 1fr) 40px; gap: 8px; padding-inline: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="ball" aria-hidden="true">⚽</div>
+        <div>
+          <p class="eyebrow">LOVEBUG FC</p>
+          <h1>조끼 세탁 기록</h1>
+        </div>
+      </div>
+      <div class="sync" id="syncStatus" role="status">
+        <i class="sync-dot"></i><span id="syncText">연결 중</span>
+      </div>
+    </header>
+
+    <section class="hero" aria-labelledby="nextTitle">
+      <p class="hero-label" id="nextTitle">최근 조끼 세탁</p>
+      <h2 class="hero-date" id="heroDate">세탁 기록을 추가해 주세요</h2>
+      <p class="hero-copy" id="heroCopy">날짜와 담당자를 선택해 기록할 수 있어요</p>
+    </section>
+
+    <nav class="tabs" aria-label="화면 선택">
+      <button class="tab active" data-tab="schedule">기록</button>
+      <button class="tab" data-tab="count">횟수</button>
+      <button class="tab" data-tab="members">명단</button>
+    </nav>
+
+    <section class="panel active" id="panel-schedule">
+      <div class="card form-card" id="scheduleForm">
+        <p class="form-title">세탁 기록 추가</p>
+        <div class="schedule-fields">
+          <button type="button" class="date-picker-control" id="newDatePickerBtn" aria-label="세탁 날짜 선택">
+            <span id="newDateText">날짜 선택</span><span class="date-picker-icon" aria-hidden="true">📅</span>
+          </button>
+          <input type="hidden" id="newDate">
+          <div class="assign" style="margin-top:0">
+            <select id="newScheduleMember" aria-label="세탁 담당자 선택"><option value="">담당자 선택</option></select>
+            <button class="btn btn-primary" id="addDateBtn">기록</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-head" style="margin-top:28px">
+        <h2>세탁 기록</h2>
+        <span id="historyCount"></span>
+      </div>
+      <div class="card history-card" id="historyList"></div>
+    </section>
+
+    <section class="panel" id="panel-count">
+      <div class="section-head">
+        <h2>누적 세탁 횟수</h2>
+        <span>세탁 기록 기준</span>
+      </div>
+      <div class="card rank-card" id="rankList"></div>
+    </section>
+
+    <section class="panel" id="panel-members">
+      <div class="section-head">
+        <h2>전체 멤버</h2>
+        <span id="memberCount"></span>
+      </div>
+      <div class="card member-card">
+        <div class="chips" id="memberList"></div>
+      </div>
+      <div class="card form-card">
+        <p class="form-title">새 멤버 추가</p>
+        <div class="form-row">
+          <input type="text" id="newMember" maxlength="40" placeholder="홍길동 홍길순" autocomplete="off">
+          <button class="btn btn-primary" id="addMemberBtn">추가</button>
+        </div>
+        <p class="form-hint">앞 이름은 명단에 표시되고, 뒤 이름은 일정에서 함께 표시됩니다.<br>예) 홍길동 홍길순</p>
+        <div class="member-manage">
+          <button class="btn btn-ghost btn-small" id="manageMembersBtn">명단 수정</button>
+        </div>
+      </div>
+    </section>
+
+    <p class="note" id="storageNote">일정과 완료 기록을 불러오고 있어요.</p>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <dialog id="editDialog">
+    <div class="modal-body" id="passwordStep">
+      <h2 class="modal-title">기록 수정</h2>
+      <p class="modal-copy">세탁 기록을 수정하려면 비밀번호를 입력해 주세요.</p>
+      <div class="modal-field">
+        <label for="editPassword">비밀번호</label>
+        <input type="password" id="editPassword" inputmode="numeric" autocomplete="off" placeholder="비밀번호 입력">
+      </div>
+      <p class="modal-error" id="passwordError"></p>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" data-close-dialog>취소</button>
+        <button class="btn btn-primary" id="checkPasswordBtn">확인</button>
+      </div>
+    </div>
+    <div class="modal-body hidden" id="editStep">
+      <h2 class="modal-title">세탁 기록 수정</h2>
+      <p class="modal-copy">현재 세탁자는 기존 기록을 보여줍니다. 담당자는 앞 이름을 기준으로 선택해 주세요.</p>
+      <div class="modal-field">
+        <label for="editDatePickerBtn">날짜</label>
+        <button type="button" class="date-picker-control" id="editDatePickerBtn">
+          <span id="editDateText">날짜 선택</span><span class="date-picker-icon" aria-hidden="true">📅</span>
+        </button>
+        <input type="hidden" id="editDate">
+      </div>
+      <div class="modal-field">
+        <label for="editHousehold">담당자</label>
+        <select id="editHousehold"></select>
+      </div>
+      <div class="modal-field">
+        <label for="editWashedBy">현재 세탁자</label>
+        <input type="text" id="editWashedBy" readonly aria-readonly="true">
+      </div>
+      <p class="modal-error" id="editError"></p>
+      <div class="modal-actions">
+        <button class="btn btn-danger" id="deleteHistoryBtn">기록 삭제</button>
+        <button class="btn btn-ghost" data-close-dialog>취소</button>
+        <button class="btn btn-primary" id="saveEditBtn">저장</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="memberDialog">
+    <div class="modal-body" id="memberPasswordStep">
+      <h2 class="modal-title">명단 수정</h2>
+      <p class="modal-copy">명단에서 삭제하려면 비밀번호를 입력해 주세요.</p>
+      <div class="modal-field">
+        <label for="memberPassword">비밀번호</label>
+        <input type="password" id="memberPassword" inputmode="numeric" autocomplete="off" placeholder="비밀번호 입력">
+      </div>
+      <p class="modal-error" id="memberPasswordError"></p>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" data-close-member-dialog>취소</button>
+        <button class="btn btn-primary" id="checkMemberPasswordBtn">확인</button>
+      </div>
+    </div>
+    <div class="modal-body hidden" id="memberDeleteStep">
+      <h2 class="modal-title">명단에서 삭제</h2>
+      <p class="modal-copy">삭제할 사람을 선택해 주세요. 기존 세탁 기록은 그대로 남고, 명단과 횟수 화면에서만 사라집니다.</p>
+      <div class="modal-field">
+        <label for="deleteMemberSelect">삭제할 사람</label>
+        <select id="deleteMemberSelect"></select>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" data-close-member-dialog>취소</button>
+        <button class="btn btn-danger" id="deleteMemberBtn">명단에서 삭제</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="calendarDialog">
+    <div class="modal-body">
+      <div class="calendar-head">
+        <button type="button" class="calendar-nav" id="prevMonthBtn" aria-label="이전 달">‹</button>
+        <h2 class="calendar-title" id="calendarTitle"></h2>
+        <button type="button" class="calendar-nav" id="nextMonthBtn" aria-label="다음 달">›</button>
+      </div>
+      <div class="calendar-weekdays" aria-hidden="true">
+        <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+      </div>
+      <div class="calendar-days" id="calendarDays"></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="closeCalendarBtn">취소</button>
+      </div>
+    </div>
+  </dialog>
+
+  <script type="module">
+    const FIREBASE_CONFIG = {
+      apiKey: "AIzaSyBtBxHi2XpTm3z8_5M6Am4mTCitLBr2k5M",
+      authDomain: "lovebugfc-vest.firebaseapp.com",
+      databaseURL: "https://lovebugfc-vest-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "lovebugfc-vest",
+      storageBucket: "lovebugfc-vest.firebasestorage.app",
+      messagingSenderId: "575454140491",
+      appId: "1:575454140491:web:84401517f339413ba895ce"
+    };
+
+    const DB_ROOT = "vestLaundry2026HouseholdsV4";
+    const LOCAL_KEY = "lovebugfc-vest-laundry-v4";
+    const EDIT_PASSWORD_HASH = "79e02056ed583dd05a133b5536291261784ee459466a2c72478aa5aeabd4aaf1";
+
+    const memberNames = [
+      "문달현", "강지훈", "윤경윤", "김재환", "이융기", "강주석", "유철", "강현철", "김주안", "한다운",
+      "남준태", "류승철", "박영광", "정원", "이승준", "전성배", "이재근", "이재익", "홍준호", "김정산"
+    ];
+
+    const partnerNames = {
+      "문달현": "장지은", "강지훈": "신수연", "윤경윤": "오혜은", "김재환": "강은미", "이융기": "강수아",
+      "강주석": "조은정", "유철": "강현주", "강현철": "이은경", "김주안": "한다솔", "한다운": "김지숙",
+      "남준태": "이혜인", "류승철": "이현주", "박영광": "이은유", "정원": "솔아", "전성배": "이인선",
+      "이재근": "이지은", "이재익": "정채린", "홍준호": "전은령", "김정산": "최수빈"
+    };
+
+    const seedSchedules = {
+      "2026-07-04": { name: "홍준호", washedBy: "전은령", status: "done" },
+      "2026-07-11": { name: "강지훈", washedBy: "신수연", status: "done" },
+      "2026-07-18": { name: "박영광", washedBy: "이은유", status: "done" },
+      "2026-07-25": { name: "문달현", washedBy: "장지은", status: "done" },
+      "2026-08-01": { name: "김재환", washedBy: "강은미", status: "done" },
+      "2026-08-08": { name: "윤경윤", washedBy: "오혜은", status: "done" },
+      "2026-08-15": { name: "강지훈", washedBy: "신수연", status: "done" },
+      "2026-08-22": { name: "한다운", washedBy: "김지숙", status: "done" },
+      "2026-08-29": { name: "이융기", washedBy: "강수아", status: "done" },
+      "2026-09-05": { name: "김정산", washedBy: "최수빈", status: "done" },
+      "2026-09-12": { name: "이재익", washedBy: "정채린", status: "done" }
+    };
+
+    function makeInitialState() {
+      const members = {};
+      memberNames.forEach((name, index) => {
+        members[`m${String(index + 1).padStart(3, "0")}`] = { name, partner: partnerNames[name] || "" };
+      });
+      return { version: 4, members, schedules: structuredClone(seedSchedules) };
+    }
+
+    let state = makeInitialState();
+    let mode = "starting";
+    let firebase = null;
+    let toastTimer;
+    let editingDate = null;
+    let calendarTargetId = null;
+    let calendarCursor = new Date();
+
+    const $ = (selector) => document.querySelector(selector);
+    const escapeHtml = (value) => String(value ?? "").replace(/[&<>'"]/g, (char) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;"
+    }[char]));
+
+    function orderedMembers() {
+      return Object.entries(state.members || {})
+        .map(([id, value]) => ({ id, name: value.name, partner: value.partner || partnerNames[value.name] || "" }))
+        .sort((a, b) => a.name.localeCompare(b.name, "ko"));
+    }
+
+    function scheduleEntries() {
+      return Object.entries(state.schedules || {}).map(([date, item]) => ({ date, ...item }));
+    }
+
+    function parseDate(date) {
+      const [year, month, day] = date.split("-").map(Number);
+      return new Date(year, month - 1, day, 12);
+    }
+
+    function dateKey(date) {
+      return [
+        date.getFullYear(),
+        String(date.getMonth() + 1).padStart(2, "0"),
+        String(date.getDate()).padStart(2, "0")
+      ].join("-");
+    }
+
+    function setDateField(id, value) {
+      $(`#${id}`).value = value;
+      $(`#${id}Text`).textContent = value ? shortDate(value) : "날짜 선택";
+    }
+
+    function openCalendar(targetId) {
+      calendarTargetId = targetId;
+      const current = $(`#${targetId}`).value;
+      calendarCursor = current ? parseDate(current) : new Date();
+      calendarCursor.setDate(1);
+      renderCalendar();
+      $("#calendarDialog").showModal();
+    }
+
+    function renderCalendar() {
+      const year = calendarCursor.getFullYear();
+      const month = calendarCursor.getMonth();
+      const firstDay = new Date(year, month, 1, 12).getDay();
+      const lastDate = new Date(year, month + 1, 0, 12).getDate();
+      const selected = calendarTargetId ? $(`#${calendarTargetId}`).value : "";
+      const today = dateKey(new Date());
+      $("#calendarTitle").textContent = `${year}년 ${month + 1}월`;
+
+      const blanks = Array.from({ length: firstDay }, () => `<span class="calendar-blank"></span>`).join("");
+      const days = Array.from({ length: lastDate }, (_, index) => {
+        const value = dateKey(new Date(year, month, index + 1, 12));
+        const classes = ["calendar-day", value === today ? "today" : "", value === selected ? "selected" : ""].filter(Boolean).join(" ");
+        return `<button type="button" class="${classes}" data-calendar-date="${value}" aria-label="${shortDate(value)}">${index + 1}</button>`;
+      }).join("");
+      $("#calendarDays").innerHTML = blanks + days;
+      document.querySelectorAll("[data-calendar-date]").forEach((button) => {
+        button.addEventListener("click", () => {
+          setDateField(calendarTargetId, button.dataset.calendarDate);
+          $("#calendarDialog").close();
+        });
+      });
+    }
+
+    function shortDate(date) {
+      const d = parseDate(date);
+      const day = ["일", "월", "화", "수", "목", "금", "토"][d.getDay()];
+      return `${String(d.getFullYear()).slice(2)}/${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")} (${day})`;
+    }
+
+    function tileDate(date) {
+      const d = parseDate(date);
+      return { day: String(d.getDate()).padStart(2, "0"), month: `${d.getMonth() + 1}월` };
+    }
+
+    function showToast(message) {
+      const toast = $("#toast");
+      toast.textContent = message;
+      toast.classList.add("show");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove("show"), 1900);
+    }
+
+    function setSyncStatus(type) {
+      const box = $("#syncStatus");
+      const text = $("#syncText");
+      box.classList.toggle("online", type === "online");
+      if (type === "online") {
+        text.textContent = "팀 공유 중";
+        $("#storageNote").textContent = "변경 내용은 팀원에게 실시간으로 공유됩니다.";
+      } else if (type === "local") {
+        text.textContent = "이 기기에 저장";
+        $("#storageNote").textContent = "공유 서버에 연결되지 않아 이 기기에만 저장됩니다.";
+      } else {
+        text.textContent = "연결 중";
+      }
+    }
+
+    function partnerFor(name) {
+      return orderedMembers().find((member) => member.name === name)?.partner || partnerNames[name] || "";
+    }
+
+    function pairLabel(name) {
+      const partner = partnerFor(name);
+      return partner ? `${name}, ${partner}` : name;
+    }
+
+    function memberOptions(selected = "", showPartners = true) {
+      const first = `<option value="">담당자 선택</option>`;
+      const members = orderedMembers();
+      const removedMember = selected && !members.some(({ name }) => name === selected)
+        ? `<option value="${escapeHtml(selected)}" selected>${escapeHtml(selected)} (삭제된 명단)</option>`
+        : "";
+      return first + removedMember + members.map(({ name }) => {
+        const label = showPartners ? pairLabel(name) : name;
+        return `<option value="${escapeHtml(name)}" ${name === selected ? "selected" : ""}>${escapeHtml(label)}</option>`;
+      }).join("");
+    }
+
+    function render() {
+      const entries = scheduleEntries();
+      const completed = entries
+        .filter((item) => item.name)
+        .sort((a, b) => b.date.localeCompare(a.date));
+      const latest = completed[0];
+
+      $("#heroDate").textContent = latest ? shortDate(latest.date) : "세탁 기록을 추가해 주세요";
+      $("#heroCopy").textContent = latest ? `${pairLabel(latest.name)} 세탁 기록` : "날짜와 담당자를 선택해 기록할 수 있어요";
+
+      $("#historyCount").textContent = `총 ${completed.length}회`;
+      $("#historyList").innerHTML = completed.length ? completed.map((item) => `
+        <div class="history-row">
+          <span class="history-date">${shortDate(item.date).replace(/ \(.\)$/, "")}</span>
+          <span class="history-name">${escapeHtml(item.name)}${item.washedBy && item.washedBy !== item.name ? `, ${escapeHtml(item.washedBy)}` : ""}</span>
+          <span class="history-actions">
+            <span class="badge done">완료</span>
+            <button class="btn btn-ghost btn-small" data-edit-history="${item.date}">수정</button>
+          </span>
+        </div>`).join("") : `<div class="empty-state">완료된 기록이 없어요.</div>`;
+
+      renderRanks(completed);
+      const members = orderedMembers();
+      $("#memberCount").textContent = `${members.length}명`;
+      $("#memberList").innerHTML = members.map(({ name }) => `<span class="chip">${escapeHtml(name)}</span>`).join("");
+      const selectedNewMember = $("#newScheduleMember").value;
+      $("#newScheduleMember").innerHTML = memberOptions(selectedNewMember);
+      bindHistoryButtons();
+      setDefaultSaturday();
+    }
+
+    function renderScheduleCard(item) {
+      const tile = tileDate(item.date);
+      const assigned = Boolean(item.name);
+      return `
+        <article class="card schedule-card">
+          <div class="schedule-top">
+            <div class="date-tile"><strong>${tile.day}</strong><small>${tile.month}</small></div>
+            <div class="schedule-info">
+              <p class="schedule-date">다가오는 세탁 일정</p>
+              <p class="schedule-person ${assigned ? "" : "empty"}">${assigned ? escapeHtml(pairLabel(item.name)) : "담당자 미정"}</p>
+            </div>
+            <span class="badge ${assigned ? "plan" : "wait"}">${assigned ? "예정" : "선택 필요"}</span>
+          </div>
+          <div class="schedule-fields">
+            <button type="button" class="date-picker-control" data-open-schedule-date="${item.date}" aria-label="다가오는 일정 날짜 변경">
+              <span id="scheduleDate-${item.date}Text">${shortDate(item.date)}</span><span class="date-picker-icon" aria-hidden="true">📅</span>
+            </button>
+            <input type="hidden" id="scheduleDate-${item.date}" value="${item.date}">
+            <div class="assign" style="margin-top:0">
+              <select data-select="${item.date}" aria-label="${shortDate(item.date)} 담당자">${memberOptions(item.name)}</select>
+              <button class="btn btn-primary" data-save="${item.date}">${assigned ? "변경" : "저장"}</button>
+            </div>
+          </div>
+          ${assigned ? `<div class="actions"><button class="btn btn-soft btn-small" data-done="${item.date}">세탁 완료</button></div>` : ""}
+        </article>`;
+    }
+
+    function renderRanks(completed) {
+      const tally = {};
+      completed.forEach(({ name }) => { if (name) tally[name] = (tally[name] || 0) + 1; });
+      const members = orderedMembers().map(({ name }, index) => ({ name, count: tally[name] || 0, index }));
+      members.sort((a, b) => b.count - a.count || a.index - b.index);
+      const max = Math.max(1, ...members.map((member) => member.count));
+      $("#rankList").innerHTML = members.map((member, index) => `
+        <div class="rank-row">
+          <span class="rank-no">${index + 1}</span>
+          <span class="rank-name">${escapeHtml(member.name)}</span>
+          <span class="bar"><i style="width:${(member.count / max) * 100}%"></i></span>
+          <span class="rank-count">${member.count}회</span>
+        </div>`).join("");
+    }
+
+    function bindScheduleButtons() {
+      document.querySelectorAll("[data-save]").forEach((button) => {
+        button.addEventListener("click", async () => {
+          const date = button.dataset.save;
+          const newDate = $(`#scheduleDate-${date}`).value;
+          const select = document.querySelector(`[data-select="${date}"]`);
+          if (!newDate) return showToast("날짜를 먼저 선택해 주세요");
+          if (!select.value) return showToast("담당자를 먼저 선택해 주세요");
+          if (newDate !== date && state.schedules?.[newDate]) return showToast("이미 다른 일정이 등록된 날짜예요");
+          button.disabled = true;
+          await savePendingSchedule(date, newDate, { name: select.value, washedBy: partnerFor(select.value), status: "planned" });
+          showToast(`${select.value} 님으로 저장했어요`);
+        });
+      });
+
+      document.querySelectorAll("[data-open-schedule-date]").forEach((button) => {
+        button.addEventListener("click", () => openCalendar(`scheduleDate-${button.dataset.openScheduleDate}`));
+      });
+
+      document.querySelectorAll("[data-done]").forEach((button) => {
+        button.addEventListener("click", async () => {
+          const date = button.dataset.done;
+          const item = state.schedules[date];
+          if (!item?.name) return;
+          if (!confirm(`${item.name} 님의 ${shortDate(date)} 세탁을 완료 처리할까요?`)) return;
+          button.disabled = true;
+          await updateSchedule(date, { ...item, status: "done" });
+          showToast("세탁 완료로 기록했어요");
+        });
+      });
+    }
+
+    function bindHistoryButtons() {
+      document.querySelectorAll("[data-edit-history]").forEach((button) => {
+        button.addEventListener("click", () => openHistoryEditor(button.dataset.editHistory));
+      });
+    }
+
+    async function verifyEditPassword(value) {
+      const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+      const hash = [...new Uint8Array(bytes)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+      return hash === EDIT_PASSWORD_HASH;
+    }
+
+    function openHistoryEditor(date) {
+      editingDate = date;
+      $("#passwordStep").classList.remove("hidden");
+      $("#editStep").classList.add("hidden");
+      $("#editPassword").value = "";
+      $("#passwordError").textContent = "";
+      $("#editError").textContent = "";
+      $("#editDialog").showModal();
+      setTimeout(() => $("#editPassword").focus(), 0);
+    }
+
+    async function unlockHistoryEditor() {
+      if (!(await verifyEditPassword($("#editPassword").value))) {
+        $("#passwordError").textContent = "비밀번호가 맞지 않습니다.";
+        $("#editPassword").select();
+        return;
+      }
+      const item = state.schedules?.[editingDate];
+      if (!item) return $("#editDialog").close();
+      setDateField("editDate", editingDate);
+      $("#editHousehold").innerHTML = memberOptions(item.name, false);
+      $("#editWashedBy").value = item.name || "";
+      $("#passwordStep").classList.add("hidden");
+      $("#editStep").classList.remove("hidden");
+    }
+
+    async function saveHistoryEdit() {
+      const newDate = $("#editDate").value;
+      const name = $("#editHousehold").value;
+      if (!newDate || !name) {
+        $("#editError").textContent = "날짜와 담당자를 모두 입력해 주세요.";
+        return;
+      }
+      if (newDate !== editingDate && state.schedules?.[newDate]) {
+        $("#editError").textContent = "이미 다른 일정이 등록된 날짜입니다.";
+        return;
+      }
+
+      const item = { name, washedBy: partnerFor(name), status: "done" };
+      $("#saveEditBtn").disabled = true;
+      try {
+        if (mode === "online") {
+          if (newDate === editingDate) {
+            await firebase.set(firebase.ref(firebase.db, `${DB_ROOT}/schedules/${editingDate}`), item);
+          } else {
+            const changes = {};
+            changes[`${DB_ROOT}/schedules/${editingDate}`] = null;
+            changes[`${DB_ROOT}/schedules/${newDate}`] = item;
+            await firebase.update(firebase.ref(firebase.db), changes);
+          }
+        } else {
+          if (newDate !== editingDate) delete state.schedules[editingDate];
+          state.schedules[newDate] = item;
+          await writeLocal();
+        }
+        $("#editDialog").close();
+        showToast("세탁 기록을 수정했어요");
+      } finally {
+        $("#saveEditBtn").disabled = false;
+      }
+    }
+
+    async function deleteHistoryRecord() {
+      const item = state.schedules?.[editingDate];
+      if (!item) return $("#editDialog").close();
+      if (!confirm(`${shortDate(editingDate)} ${pairLabel(item.name)} 세탁 기록을 삭제할까요?\n삭제한 기록은 되돌릴 수 없습니다.`)) return;
+
+      $("#deleteHistoryBtn").disabled = true;
+      try {
+        if (mode === "online") {
+          await firebase.set(firebase.ref(firebase.db, `${DB_ROOT}/schedules/${editingDate}`), null);
+        } else {
+          delete state.schedules[editingDate];
+          await writeLocal();
+        }
+        $("#editDialog").close();
+        showToast("세탁 기록을 삭제했어요");
+      } finally {
+        $("#deleteHistoryBtn").disabled = false;
+      }
+    }
+
+    function openMemberManager() {
+      $("#memberPasswordStep").classList.remove("hidden");
+      $("#memberDeleteStep").classList.add("hidden");
+      $("#memberPassword").value = "";
+      $("#memberPasswordError").textContent = "";
+      $("#memberDialog").showModal();
+      setTimeout(() => $("#memberPassword").focus(), 0);
+    }
+
+    async function unlockMemberManager() {
+      if (!(await verifyEditPassword($("#memberPassword").value))) {
+        $("#memberPasswordError").textContent = "비밀번호가 맞지 않습니다.";
+        $("#memberPassword").select();
+        return;
+      }
+      const members = orderedMembers();
+      $("#deleteMemberSelect").innerHTML = members.map(({ id, name }) =>
+        `<option value="${escapeHtml(id)}">${escapeHtml(name)}</option>`
+      ).join("");
+      $("#deleteMemberBtn").disabled = members.length === 0;
+      $("#memberPasswordStep").classList.add("hidden");
+      $("#memberDeleteStep").classList.remove("hidden");
+    }
+
+    async function deleteSelectedMember() {
+      const id = $("#deleteMemberSelect").value;
+      const member = state.members?.[id];
+      if (!id || !member) return;
+      $("#deleteMemberBtn").disabled = true;
+      try {
+        if (mode === "online") {
+          await firebase.remove(firebase.ref(firebase.db, `${DB_ROOT}/members/${id}`));
+        } else {
+          delete state.members[id];
+          await writeLocal();
+        }
+        $("#memberDialog").close();
+        showToast(`${member.name} 님을 명단에서 삭제했어요`);
+      } finally {
+        $("#deleteMemberBtn").disabled = false;
+      }
+    }
+
+    function setDefaultSaturday() {
+      if ($("#newDate").value) return;
+      const date = new Date();
+      date.setHours(12, 0, 0, 0);
+      const daysUntilSaturday = (6 - date.getDay() + 7) % 7;
+      date.setDate(date.getDate() + daysUntilSaturday);
+      setDateField("newDate", dateKey(date));
+    }
+
+    async function writeLocal() {
+      localStorage.setItem(LOCAL_KEY, JSON.stringify(state));
+      render();
+    }
+
+    async function updateSchedule(date, item) {
+      if (mode === "online") {
+        await firebase.set(firebase.ref(firebase.db, `${DB_ROOT}/schedules/${date}`), item);
+      } else {
+        state.schedules[date] = item;
+        await writeLocal();
+      }
+    }
+
+    async function savePendingSchedule(oldDate, newDate, item) {
+      if (oldDate === newDate) return updateSchedule(oldDate, item);
+      if (mode === "online") {
+        const changes = {};
+        changes[`${DB_ROOT}/schedules/${oldDate}`] = null;
+        changes[`${DB_ROOT}/schedules/${newDate}`] = item;
+        await firebase.update(firebase.ref(firebase.db), changes);
+      } else {
+        delete state.schedules[oldDate];
+        state.schedules[newDate] = item;
+        await writeLocal();
+      }
+    }
+
+    async function addDate(date, name) {
+      if (state.schedules?.[date]?.name) return showToast("이미 등록된 날짜예요");
+      await updateSchedule(date, { name, washedBy: partnerFor(name), status: "done" });
+      setDateField("newDate", "");
+      $("#newScheduleMember").value = "";
+      showToast(`${shortDate(date)} ${pairLabel(name)} 세탁 기록을 추가했어요`);
+    }
+
+    async function addMember(name) {
+      const normalized = name.trim().replace(/\s+/g, " ");
+      if (!normalized) return;
+      const [primaryName, ...partnerParts] = normalized.split(" ");
+      const partner = partnerParts.join(" ");
+      if (orderedMembers().some((member) => member.name.toLocaleLowerCase() === primaryName.toLocaleLowerCase())) {
+        return showToast("이미 등록된 이름이에요");
+      }
+      if (mode === "online") {
+        await firebase.push(firebase.ref(firebase.db, `${DB_ROOT}/members`), { name: primaryName, partner });
+      } else {
+        state.members[`local-${Date.now()}`] = { name: primaryName, partner };
+        await writeLocal();
+      }
+      $("#newMember").value = "";
+      showToast(`${partner ? `${primaryName}, ${partner}` : primaryName} 님을 추가했어요`);
+    }
+
+    function activateLocal() {
+      if (mode === "local") return;
+      mode = "local";
+      try {
+        const saved = JSON.parse(localStorage.getItem(LOCAL_KEY));
+        if (saved?.version === 4) state = saved;
+        else localStorage.setItem(LOCAL_KEY, JSON.stringify(state));
+      } catch {
+        localStorage.setItem(LOCAL_KEY, JSON.stringify(state));
+      }
+      setSyncStatus("local");
+      render();
+    }
+
+    async function connectSharedData() {
+      try {
+        const appModule = await import("https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js");
+        const dbModule = await import("https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js");
+        const app = appModule.initializeApp(FIREBASE_CONFIG);
+        const db = dbModule.getDatabase(app);
+        firebase = { db, ...dbModule };
+        const rootRef = dbModule.ref(db, DB_ROOT);
+
+        await dbModule.runTransaction(rootRef, (current) => current || makeInitialState(), { applyLocally: false });
+        dbModule.onValue(rootRef, (snapshot) => {
+          const incoming = snapshot.val();
+          if (!incoming) return;
+          state = incoming;
+          mode = "online";
+          setSyncStatus("online");
+          render();
+        }, () => activateLocal());
+      } catch (error) {
+        console.warn("공유 데이터 연결 실패. 기기 저장 모드로 전환합니다.", error);
+        activateLocal();
+      }
+    }
+
+    document.querySelectorAll(".tab").forEach((tab) => {
+      tab.addEventListener("click", () => {
+        document.querySelectorAll(".tab").forEach((item) => item.classList.toggle("active", item === tab));
+        document.querySelectorAll(".panel").forEach((panel) => panel.classList.toggle("active", panel.id === `panel-${tab.dataset.tab}`));
+      });
+    });
+
+    $("#addDateBtn").addEventListener("click", () => {
+      const date = $("#newDate").value;
+      const name = $("#newScheduleMember").value;
+      if (!date) return showToast("날짜를 선택해 주세요");
+      if (!name) return showToast("담당자를 선택해 주세요");
+      addDate(date, name);
+    });
+
+    $("#addMemberBtn").addEventListener("click", () => addMember($("#newMember").value));
+    $("#newMember").addEventListener("keydown", (event) => {
+      if (event.key === "Enter") addMember(event.currentTarget.value);
+    });
+
+    $("#checkPasswordBtn").addEventListener("click", unlockHistoryEditor);
+    $("#editPassword").addEventListener("keydown", (event) => {
+      if (event.key === "Enter") unlockHistoryEditor();
+    });
+    $("#saveEditBtn").addEventListener("click", saveHistoryEdit);
+    $("#deleteHistoryBtn").addEventListener("click", deleteHistoryRecord);
+    document.querySelectorAll("[data-close-dialog]").forEach((button) => {
+      button.addEventListener("click", () => $("#editDialog").close());
+    });
+    $("#editDialog").addEventListener("click", (event) => {
+      if (event.target === event.currentTarget) event.currentTarget.close();
+    });
+
+    $("#manageMembersBtn").addEventListener("click", openMemberManager);
+    $("#checkMemberPasswordBtn").addEventListener("click", unlockMemberManager);
+    $("#memberPassword").addEventListener("keydown", (event) => {
+      if (event.key === "Enter") unlockMemberManager();
+    });
+    $("#deleteMemberBtn").addEventListener("click", deleteSelectedMember);
+    document.querySelectorAll("[data-close-member-dialog]").forEach((button) => {
+      button.addEventListener("click", () => $("#memberDialog").close());
+    });
+    $("#memberDialog").addEventListener("click", (event) => {
+      if (event.target === event.currentTarget) event.currentTarget.close();
+    });
+
+    $("#newDatePickerBtn").addEventListener("click", () => openCalendar("newDate"));
+    $("#editDatePickerBtn").addEventListener("click", () => openCalendar("editDate"));
+    $("#prevMonthBtn").addEventListener("click", () => {
+      calendarCursor.setMonth(calendarCursor.getMonth() - 1);
+      renderCalendar();
+    });
+    $("#nextMonthBtn").addEventListener("click", () => {
+      calendarCursor.setMonth(calendarCursor.getMonth() + 1);
+      renderCalendar();
+    });
+    $("#closeCalendarBtn").addEventListener("click", () => $("#calendarDialog").close());
+    $("#calendarDialog").addEventListener("click", (event) => {
+      if (event.target === event.currentTarget) event.currentTarget.close();
+    });
+
+    render();
+    setSyncStatus("starting");
+    connectSharedData();
+  </script>
+</body>
+</html>
