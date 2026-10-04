@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>축구 조편성 및 명단 관리자</title>
+    <style>
+        body { font-family: 'Malgun Gothic', sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background-color: #f9f9f9; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .input-group { margin-bottom: 15px; }
+        label { font-weight: bold; margin-bottom: 5px; display: block; }
+        input[type="text"], input[type="number"], input[type="date"] { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        
+        button { background-color: #28a745; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-size: 15px; width: 100%; margin-top: 10px; font-weight: bold; }
+        button:hover { background-color: #218838; }
+        .btn-save { background-color: #007bff; }
+        .btn-save:hover { background-color: #0056b3; }
+        .btn-danger { background-color: #dc3545; margin-top: 0; }
+        .btn-danger:hover { background-color: #bd2130; }
+        .btn-small { padding: 5px 10px; font-size: 13px; width: auto; margin: 0; }
+        .btn-secondary { background-color: #6c757d; }
+        .btn-secondary:hover { background-color: #5a6268; }
+        .btn-warning { background-color: #ffc107; color: #212529; }
+        .btn-warning:hover { background-color: #e0a800; }
+        .btn-refresh { background-color: #17a2b8; color: white; }
+        .btn-refresh:hover { background-color: #138496; }
+
+        .btn-group { display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap; }
+        .btn-group button { flex: 1; min-width: 200px; margin-top: 0; }
+
+        /* 출석체크 & 멤버 관리 스타일 */
+        .member-flex { display: flex; gap: 10px; margin-bottom: 15px; }
+        .member-flex input { flex: 1; }
+        .checklist-container { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px; background-color: #f1f1f1; border-radius: 6px; min-height: 40px; align-items: center; }
+        .member-badge { display: inline-flex; align-items: center; background: white; padding: 6px 12px; border-radius: 20px; border: 1px solid #ccc; font-size: 14px; user-select: none; }
+        .member-badge input[type="checkbox"] { margin-right: 6px; cursor: pointer; }
+        .action-btn { margin-left: 6px; cursor: pointer; font-size: 12px; opacity: 0.7; transition: 0.2s; }
+        .action-btn:hover { opacity: 1.0; }
+        .btn-edit { color: #007bff; }
+        .btn-delete { color: #dc3545; font-weight: bold; }
+
+        /* 카운트 강조 태그 */
+        .count-highlight { color: #007bff; font-weight: bold; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: center; }
+        th { background-color: #f2f2f2; }
+        .team-box { margin-bottom: 15px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; background-color: #fdfdfd; }
+        .history-item { border: 1px solid #ddd; border-radius: 6px; padding: 15px; margin-bottom: 15px; background-color: #fafafa; }
+        #result-section { display: none; }
+    </style>
+</head>
+<body>
+
+    <!-- 1. 고정 멤버 관리 및 출석 체크 영역 -->
+    <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+            <h2 style="margin: 0;">👥 명단 관리 (출석: <span id="checkedTotalCount" class="count-highlight">0</span>명 / 전체 <span id="totalMemberCount">0</span>명)</h2>
+            <button id="toggleEditBtn" class="btn-small btn-warning" onclick="toggleEditMode()">⚙️ 명단 수정/삭제 모드</button>
+        </div>
+        
+        <!-- 남자 명단 섹션 -->
+        <label>🏃‍♂️ 남자 멤버 추가</label>
+        <div class="member-flex">
+            <input type="text" id="newMan" placeholder="이름 입력 후 엔터 또는 추가 버튼" onkeypress="if(event.keyCode==13) addMember('men')">
+            <button class="btn-small" onclick="addMember('men')">추가</button>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+            <label style="margin:0;">남자 출석 체크 (출석: <span id="checkedMenCount" class="count-highlight">0</span>명 / 전체 <span id="menCount">0</span>명)</label>
+            <div>
+                <button class="btn-small btn-secondary" onclick="toggleAll('men', true)">전체선택</button>
+                <button class="btn-small btn-secondary" onclick="toggleAll('men', false)">전체해제</button>
+            </div>
+        </div>
+        <div id="menChecklist" class="checklist-container" style="margin-bottom: 20px;"></div>
+
+        <!-- 여자 명단 섹션 -->
+        <label>🏃‍♀️ 여자 멤버 추가</label>
+        <div class="member-flex">
+            <input type="text" id="newWoman" placeholder="이름 입력 후 엔터 또는 추가 버튼" onkeypress="if(event.keyCode==13) addMember('women')">
+            <button class="btn-small" onclick="addMember('women')">추가</button>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+            <label style="margin:0;">여자 출석 체크 (출석: <span id="checkedWomenCount" class="count-highlight">0</span>명 / 전체 <span id="womenCount">0</span>명)</label>
+            <div>
+                <button class="btn-small btn-secondary" onclick="toggleAll('women', true)">전체선택</button>
+                <button class="btn-small btn-secondary" onclick="toggleAll('women', false)">전체해제</button>
+            </div>
+        </div>
+        <div id="womenChecklist" class="checklist-container"></div>
+        
+        <button class="btn-small btn-secondary" style="margin-top: 15px; width: 100%;" onclick="resetToDefaultRoster()">🔄 초기 명단(42명)으로 새로고침</button>
+    </div>
+
+    <!-- 2. 경기 설정 영역 -->
+    <div class="card">
+        <h2>⚽ 경기 설정 및 조편성</h2>
+        
+        <div class="input-group">
+            <label>날짜 입력</label>
+            <input type="date" id="matchDate" required>
+        </div>
+
+        <div class="input-group">
+            <label>팀 수 (개)</label>
+            <input type="number" id="teamCount" placeholder="예: 3" min="2" value="3">
+        </div>
+
+        <div class="input-group">
+            <label>진행 시간 (시간)</label>
+            <input type="number" id="totalHours" placeholder="예: 2" min="0.5" step="0.5" value="2">
+        </div>
+
+        <button id="generateBtn">조편성 및 스케줄 생성하기</button>
+    </div>
+
+    <!-- 3. 결과 출력 영역 -->
+    <div id="result-section" class="card">
+        <h2>📋 생성 결과</h2>
+        <div id="summary"></div>
+        
+        <h3>팀 배정 결과</h3>
+        <div id="teamsOutput"></div>
+
+        <h3>경기 스케줄 (10분 경기, 2분 휴식)</h3>
+        <div id="scheduleOutput"></div>
+
+        <div class="btn-group">
+            <button id="reGenerateBtn" class="btn-refresh">🎲 팀 다시 편성하기 (재편성)</button>
+            <button id="saveBtn" class="btn-save">💾 내 브라우저에 오늘 경기 이력 저장</button>
+        </div>
+    </div>
+
+    <!-- 4. 이력 확인 영역 -->
+    <div class="card">
+        <h2>📁 저장된 경기 이력 목록</h2>
+        <div id="historyList">저장된 데이터가 없습니다.</div>
+        <button id="clearHistoryBtn" class="btn-danger" style="margin-top: 15px;">전체 이력 삭제</button>
+    </div>
+
+    <script>
+        // === [기본 42명 명단 데이터 (남 21명, 여 21명)] ===
+        const defaultRoster = {
+            men: ["김재환", "강주석", "강지훈", "강현철", "김정산", "김주안", "남준태", "류승철", "맹현균", "민용호", "문달현", "박영광", "윤경윤", "이승준", "이융기", "이재근", "이재익", "전성배", "한다운", "홍준호", "정원"],
+            women: ["신수연", "오혜은", "강수아", "강은미", "강현주", "김지숙", "솔아", "오수정", "이은경", "이은유", "이인선", "이지은", "이현주", "이혜인", "장지은", "전은령", "전희원", "정채린", "조은정", "최수빈", "한다솔"]
+        };
+
+        let isEditMode = false;
+
+        let roster = JSON.parse(localStorage.getItem('soccer_roster'));
+        if (!roster || (roster.men.length === 0 && roster.women.length === 0)) {
+            roster = JSON.parse(JSON.stringify(defaultRoster));
+            localStorage.setItem('soccer_roster', JSON.stringify(roster));
+        }
+
+        function saveRoster() {
+            localStorage.setItem('soccer_roster', JSON.stringify(roster));
+            renderRoster();
+        }
+
+        function resetToDefaultRoster() {
+            if (confirm("초기 명단(남 21명, 여 21명 / 총 42명)으로 명단을 복원하시겠습니까?")) {
+                roster = JSON.parse(JSON.stringify(defaultRoster));
+                document.getElementById('menChecklist').innerHTML = '';
+                document.getElementById('womenChecklist').innerHTML = '';
+                saveRoster();
+            }
+        }
+
+        function toggleEditMode() {
+            isEditMode = !isEditMode;
+            const btn = document.getElementById('toggleEditBtn');
+            if (isEditMode) {
+                btn.innerText = '✅ 명단 편집 완료';
+                btn.classList.remove('btn-warning');
+                btn.classList.add('btn-save');
+            } else {
+                btn.innerText = '⚙️️ 명단 수정/삭제 모드';
+                btn.classList.remove('btn-save');
+                btn.classList.add('btn-warning');
+            }
+            renderRoster();
+        }
+
+        function updateCheckedCount() {
+            const checkedMen = document.querySelectorAll('.men-cb:checked').length;
+            const checkedWomen = document.querySelectorAll('.women-cb:checked').length;
+
+            document.getElementById('checkedMenCount').innerText = checkedMen;
+            document.getElementById('checkedWomenCount').innerText = checkedWomen;
+            document.getElementById('checkedTotalCount').innerText = checkedMen + checkedWomen;
+        }
+
+        function addMember(gender) {
+            const inputId = gender === 'men' ? 'newMan' : 'newWoman';
+            const inputElem = document.getElementById(inputId);
+            const name = inputElem.value.trim();
+            
+            if (!name) return;
+            if (roster[gender].includes(name)) {
+                alert("이미 등록된 이름입니다.");
+                return;
+            }
+            
+            roster[gender].push(name);
+            inputElem.value = '';
+            saveRoster();
+        }
+
+        function editMember(gender, index) {
+            const oldName = roster[gender][index];
+            const newName = prompt(`'${oldName}' 님의 이름을 수정합니다:`, oldName);
+            
+            if (newName !== null) {
+                const trimmedName = newName.trim();
+                if (!trimmedName) {
+                    alert("이름은 비워둘 수 없습니다.");
+                    return;
+                }
+                if (trimmedName !== oldName && roster[gender].includes(trimmedName)) {
+                    alert("이미 동일한 이름이 명단에 존재합니다.");
+                    return;
+                }
+                roster[gender][index] = trimmedName;
+                saveRoster();
+            }
+        }
+
+        function removeMember(gender, index) {
+            const name = roster[gender][index];
+            if (confirm(`'${name}' 님을 명단에서 삭제하시겠습니까?`)) {
+                roster[gender].splice(index, 1);
+                saveRoster();
+            }
+        }
+
+        function toggleAll(gender, isCheck) {
+            const checkboxes = document.querySelectorAll(`.${gender}-cb`);
+            checkboxes.forEach(cb => cb.checked = isCheck);
+            updateCheckedCount();
+        }
+
+        function renderRoster() {
+            const menDiv = document.getElementById('menChecklist');
+            const womenDiv = document.getElementById('womenChecklist');
+            
+            const existingMenCbs = document.querySelectorAll('.men-cb');
+            const existingWomenCbs = document.querySelectorAll('.women-cb');
+            
+            const isFirstRender = existingMenCbs.length === 0 && existingWomenCbs.length === 0;
+            
+            const checkedMenNames = new Set(Array.from(document.querySelectorAll('.men-cb:checked')).map(cb => cb.value));
+            const checkedWomenNames = new Set(Array.from(document.querySelectorAll('.women-cb:checked')).map(cb => cb.value));
+
+            document.getElementById('menCount').innerText = roster.men.length;
+            document.getElementById('womenCount').innerText = roster.women.length;
+            document.getElementById('totalMemberCount').innerText = roster.men.length + roster.women.length;
+
+            const renderBadge = (name, idx, gender) => {
+                let isChecked = false;
+                
+                if (!isFirstRender) {
+                    const checkedSet = gender === 'men' ? checkedMenNames : checkedWomenNames;
+                    const existingCbs = gender === 'men' ? existingMenCbs : existingWomenCbs;
+                    const wasInDom = Array.from(existingCbs).some(cb => cb.value === name);
+                    
+                    if (wasInDom) {
+                        isChecked = checkedSet.has(name);
+                    } else {
+                        isChecked = true;
+                    }
+                }
+
+                const editButtonsHtml = isEditMode ? `
+                    <span class="action-btn btn-edit" title="수정" onclick="editMember('${gender}', ${idx})">✏️</span>
+                    <span class="action-btn btn-delete" title="삭제" onclick="removeMember('${gender}', ${idx})">✕</span>
+                ` : '';
+
+                return `
+                    <div class="member-badge">
+                        <label style="display:inline-flex; align-items:center; cursor:pointer; margin:0;">
+                            <input type="checkbox" class="${gender}-cb" value="${name}" ${isChecked ? 'checked' : ''} onchange="updateCheckedCount()"> <span>${name}</span>
+                        </label>
+                        ${editButtonsHtml}
+                    </div>
+                `;
+            };
+
+            menDiv.innerHTML = roster.men.length ? roster.men.map((name, idx) => renderBadge(name, idx, 'men')).join('') : '<span style="color:#777; font-size:14px;">등록된 남성 멤버가 없습니다.</span>';
+            womenDiv.innerHTML = roster.women.length ? roster.women.map((name, idx) => renderBadge(name, idx, 'women')).join('') : '<span style="color:#777; font-size:14px;">등록된 여성 멤버가 없습니다.</span>';
+
+            updateCheckedCount();
+        }
+
+        renderRoster();
+        document.getElementById('matchDate').value = new Date().toISOString().substring(0, 10);
+
+        // === [조편성 및 스케줄링 생성 함수] ===
+        let currentResultData = null;
+
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function generateTeamsAndSchedule() {
+            const checkedMen = Array.from(document.querySelectorAll('.men-cb:checked')).map(cb => cb.value);
+            const checkedWomen = Array.from(document.querySelectorAll('.women-cb:checked')).map(cb => cb.value);
+            
+            const numTeams = parseInt(document.getElementById('teamCount').value);
+            const hours = parseFloat(document.getElementById('totalHours').value);
+            const date = document.getElementById('matchDate').value;
+
+            if (checkedMen.length + checkedWomen.length < numTeams) {
+                alert(`출석 인원이 ${numTeams}명(팀 수)보다 적습니다. 인원을 더 체크해주세요.`);
+                return;
+            }
+            if (!numTeams || numTeams < 2 || !hours || !date) {
+                alert("날짜, 팀 수, 진행 시간은 필수 입력값입니다.");
+                return;
+            }
+
+            const men = shuffle([...checkedMen]);
+            const women = shuffle([...checkedWomen]);
+
+            let teams = Array.from({ length: numTeams }, () => ({ men: [], women: [] }));
+
+            // 1. 남자 선수 순환 배정
+            men.forEach((player, i) => {
+                teams[i % numTeams].men.push(player);
+            });
+
+            // 2. 여자 선수 배정 (현재 총인원이 가장 적은 팀 우선 배치)
+            women.forEach((player) => {
+                let targetTeam = teams[0];
+                for (let i = 1; i < numTeams; i++) {
+                    const currentTeam = teams[i];
+                    const targetTotal = targetTeam.men.length + targetTeam.women.length;
+                    const currentTotal = currentTeam.men.length + currentTeam.women.length;
+
+                    if (currentTotal < targetTotal) {
+                        targetTeam = currentTeam;
+                    } else if (currentTotal === targetTotal) {
+                        if (currentTeam.women.length < targetTeam.women.length) {
+                            targetTeam = currentTeam;
+                        }
+                    }
+                }
+                targetTeam.women.push(player);
+            });
+
+            const totalMinutes = hours * 60;
+            const cycleMinutes = 12; // 10분 경기 + 2분 휴식
+            const totalMatches = Math.floor(totalMinutes / cycleMinutes);
+
+            if (totalMatches < 1) {
+                alert("시간이 너무 짧아 경기를 진행할 수 없습니다.");
+                return;
+            }
+
+            let matchPairs = [];
+            for (let i = 0; i < numTeams; i++) {
+                for (let j = i + 1; j < numTeams; j++) {
+                    matchPairs.push([i, j]);
+                }
+            }
+            matchPairs = shuffle(matchPairs);
+
+            let schedule = [];
+            let currentTime = 0;
+            let teamMatchCount = Array(numTeams).fill(0);
+
+            for (let i = 0; i < totalMatches; i++) {
+                const pair = matchPairs[i % matchPairs.length];
+                teamMatchCount[pair[0]]++;
+                teamMatchCount[pair[1]]++;
+
+                schedule.push({
+                    matchNum: i + 1,
+                    teamA: pair[0] + 1,
+                    teamB: pair[1] + 1,
+                    startMin: currentTime,
+                    endMin: currentTime + 10
+                });
+                currentTime += cycleMinutes;
+            }
+
+            const avgMatches = (teamMatchCount.reduce((a, b) => a + b, 0) / numTeams).toFixed(1);
+            document.getElementById('summary').innerHTML = `
+                <p><strong>참석 인원:</strong> 총 ${checkedMen.length + checkedWomen.length}명 (남: ${checkedMen.length}, 여: ${checkedWomen.length})</p>
+                <p><strong>총 시간:</strong> ${totalMinutes}분</p>
+                <p><strong>총 경기 수:</strong> ${totalMatches}경기 (각 팀당 평균 <strong>${avgMatches}경기</strong> 소화)</p>
+            `;
+
+            let teamsHTML = '';
+            teams.forEach((team, idx) => {
+                teamsHTML += `
+                    <div class="team-box">
+                        <strong>팀 ${idx + 1} (총 ${team.men.length + team.women.length}명)</strong><br>
+                        남성: ${team.men.join(', ') || '없음'} <br>
+                        여성: ${team.women.join(', ') || '없음'}
+                    </div>
+                `;
+            });
+            document.getElementById('teamsOutput').innerHTML = teamsHTML;
+
+            let scheduleHTML = `<table><tr><th>경기</th><th>진행 시간</th><th>대진표</th></tr>`;
+            schedule.forEach(m => {
+                scheduleHTML += `<tr><td>${m.matchNum}경기</td><td>${m.startMin}분 ~ ${m.endMin}분</td><td><strong>팀 ${m.teamA}</strong> VS <strong>팀 ${m.teamB}</strong></td></tr>`;
+            });
+            scheduleHTML += `</table>`;
+            document.getElementById('scheduleOutput').innerHTML = scheduleHTML;
+
+            currentResultData = { id: Date.now(), date, hours, numTeams, totalPeople: checkedMen.length + checkedWomen.length, teams, schedule };
+            
+            const resultSection = document.getElementById('result-section');
+            resultSection.style.display = 'block';
+        }
+
+        // 버튼 이벤트 바인딩
+        document.getElementById('generateBtn').addEventListener('click', generateTeamsAndSchedule);
+        document.getElementById('reGenerateBtn').addEventListener('click', generateTeamsAndSchedule);
+
+        // === [이력 저장 및 관리] ===
+        document.getElementById('saveBtn').addEventListener('click', () => {
+            if (!currentResultData) return;
+            let history = JSON.parse(localStorage.getItem('soccer_history') || '[]');
+            history.unshift(currentResultData);
+            localStorage.setItem('soccer_history', JSON.stringify(history));
+            alert("이력이 성공적으로 저장되었습니다!");
+            loadHistory();
+        });
+
+        function loadHistory() {
+            const history = JSON.parse(localStorage.getItem('soccer_history') || '[]');
+            const historyListDiv = document.getElementById('historyList');
+
+            if (history.length === 0) {
+                historyListDiv.innerHTML = "저장된 이력이 없습니다.";
+                return;
+            }
+
+            let html = '';
+            history.forEach(item => {
+                html += `
+                    <div class="history-item">
+                        <h4>📅 ${item.date} (총 ${item.totalPeople || 0}명 / ${item.numTeams}팀 / ${item.hours}시간)</h4>
+                        <details>
+                            <summary style="cursor:pointer; font-weight:bold; margin-bottom:10px;">상세 명단 및 스케줄 보기 🔽</summary>
+                            <p><strong>팀 편성:</strong></p>
+                            <ul>
+                                ${item.teams.map((t, idx) => `<li>팀 ${idx+1}: 남[${t.men.join(', ')}] 여[${t.women.join(', ')}]</li>`).join('')}
+                            </ul>
+                            <table>
+                                <tr><th>경기</th><th>시간</th><th>대진</th></tr>
+                                ${item.schedule.map(s => `<tr><td>${s.matchNum}경기</td><td>${s.startMin}분~${s.endMin}분</td><td>팀 ${s.teamA} vs 팀 ${s.teamB}</td></tr>`).join('')}
+                            </table>
+                        </details>
+                    </div>
+                `;
+            });
+            historyListDiv.innerHTML = html;
+        }
+
+        document.getElementById('clearHistoryBtn').addEventListener('click', () => {
+            if (confirm("저장된 모든 '경기 이력'을 삭제하시겠습니까? (고정 멤버 명단은 유지됩니다)")) {
+                localStorage.removeItem('soccer_history');
+                loadHistory();
+            }
+        });
+
+        loadHistory();
+    </script>
+</body>
+</html>
