@@ -24,11 +24,13 @@
         .btn-warning:hover { background-color: #e0a800; }
         .btn-refresh { background-color: #17a2b8; color: white; }
         .btn-refresh:hover { background-color: #138496; }
+        
+        .btn-kakao { background-color: #FEE500; color: #191919; }
+        .btn-kakao:hover { background-color: #FADA0A; }
 
         .btn-group { display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap; }
-        .btn-group button { flex: 1; min-width: 200px; margin-top: 0; }
+        .btn-group button { flex: 1; min-width: 180px; margin-top: 0; }
 
-        /* 출석체크 & 멤버 관리 스타일 */
         .member-flex { display: flex; gap: 10px; margin-bottom: 15px; }
         .member-flex input { flex: 1; }
         .checklist-container { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px; background-color: #f1f1f1; border-radius: 6px; min-height: 40px; align-items: center; }
@@ -39,7 +41,6 @@
         .btn-edit { color: #007bff; }
         .btn-delete { color: #dc3545; font-weight: bold; }
 
-        /* 카운트 강조 태그 */
         .count-highlight { color: #007bff; font-weight: bold; }
         
         table { width: 100%; border-collapse: collapse; margin-top: 15px; }
@@ -126,8 +127,9 @@
         <div id="scheduleOutput"></div>
 
         <div class="btn-group">
-            <button id="reGenerateBtn" class="btn-refresh">🎲 팀 다시 편성하기 (재편성)</button>
-            <button id="saveBtn" class="btn-save">💾 내 브라우저에 오늘 경기 이력 저장</button>
+            <button id="reGenerateBtn" class="btn-refresh">🎲 팀 다시 편성하기</button>
+            <button id="copyKakaoBtn" class="btn-kakao">💬 카톡 공유용 텍스트 복사</button>
+            <button id="saveBtn" class="btn-save">💾 오늘 경기 이력 저장</button>
         </div>
     </div>
 
@@ -139,13 +141,17 @@
     </div>
 
     <script>
-        // === [기본 42명 명단 데이터 (남 21명, 여 21명)] ===
         const defaultRoster = {
             men: ["김재환", "강주석", "강지훈", "강현철", "김정산", "김주안", "남준태", "류승철", "맹현균", "민용호", "문달현", "박영광", "윤경윤", "이승준", "이융기", "이재근", "이재익", "전성배", "한다운", "홍준호", "정원"],
             women: ["신수연", "오혜은", "강수아", "강은미", "강현주", "김지숙", "솔아", "오수정", "이은경", "이은유", "이인선", "이지은", "이현주", "이혜인", "장지은", "전은령", "전희원", "정채린", "조은정", "최수빈", "한다솔"]
         };
 
         let isEditMode = false;
+
+        // 인덱스를 팀 알파벳(0->A, 1->B, 2->C...)으로 변환하는 함수
+        function getTeamLetter(index) {
+            return String.fromCharCode(65 + index);
+        }
 
         let roster = JSON.parse(localStorage.getItem('soccer_roster'));
         if (!roster || (roster.men.length === 0 && roster.women.length === 0)) {
@@ -175,7 +181,7 @@
                 btn.classList.remove('btn-warning');
                 btn.classList.add('btn-save');
             } else {
-                btn.innerText = '⚙️️ 명단 수정/삭제 모드';
+                btn.innerText = '⚙ 명단 수정/삭제 모드';
                 btn.classList.remove('btn-save');
                 btn.classList.add('btn-warning');
             }
@@ -295,7 +301,6 @@
         renderRoster();
         document.getElementById('matchDate').value = new Date().toISOString().substring(0, 10);
 
-        // === [조편성 및 스케줄링 생성 함수] ===
         let currentResultData = null;
 
         function shuffle(array) {
@@ -328,12 +333,10 @@
 
             let teams = Array.from({ length: numTeams }, () => ({ men: [], women: [] }));
 
-            // 1. 남자 선수 순환 배정
             men.forEach((player, i) => {
                 teams[i % numTeams].men.push(player);
             });
 
-            // 2. 여자 선수 배정 (현재 총인원이 가장 적은 팀 우선 배치)
             women.forEach((player) => {
                 let targetTeam = teams[0];
                 for (let i = 1; i < numTeams; i++) {
@@ -353,7 +356,7 @@
             });
 
             const totalMinutes = hours * 60;
-            const cycleMinutes = 12; // 10분 경기 + 2분 휴식
+            const cycleMinutes = 12;
             const totalMatches = Math.floor(totalMinutes / cycleMinutes);
 
             if (totalMatches < 1) {
@@ -380,8 +383,8 @@
 
                 schedule.push({
                     matchNum: i + 1,
-                    teamA: pair[0] + 1,
-                    teamB: pair[1] + 1,
+                    teamA: getTeamLetter(pair[0]),
+                    teamB: getTeamLetter(pair[1]),
                     startMin: currentTime,
                     endMin: currentTime + 10
                 });
@@ -399,7 +402,7 @@
             teams.forEach((team, idx) => {
                 teamsHTML += `
                     <div class="team-box">
-                        <strong>팀 ${idx + 1} (총 ${team.men.length + team.women.length}명)</strong><br>
+                        <strong>팀 ${getTeamLetter(idx)} (총 ${team.men.length + team.women.length}명)</strong><br>
                         남성: ${team.men.join(', ') || '없음'} <br>
                         여성: ${team.women.join(', ') || '없음'}
                     </div>
@@ -414,17 +417,51 @@
             scheduleHTML += `</table>`;
             document.getElementById('scheduleOutput').innerHTML = scheduleHTML;
 
-            currentResultData = { id: Date.now(), date, hours, numTeams, totalPeople: checkedMen.length + checkedWomen.length, teams, schedule };
+            currentResultData = { id: Date.now(), date, hours, numTeams, totalPeople: checkedMen.length + checkedWomen.length, menCount: checkedMen.length, womenCount: checkedWomen.length, teams, schedule };
             
             const resultSection = document.getElementById('result-section');
             resultSection.style.display = 'block';
         }
 
-        // 버튼 이벤트 바인딩
+        // === [카카오톡 복사 시 팀 A, B, C 알파벳 반영] ===
+        document.getElementById('copyKakaoBtn').addEventListener('click', async () => {
+            if (!currentResultData) return;
+
+            const data = currentResultData;
+            let text = `⚽ [${data.date} 축구 조편성 & 스케줄]\n`;
+            text += `-----------------------------------\n`;
+            text += `👥 참석 인원: 총 ${data.totalPeople}명 (남 ${data.menCount} / 여 ${data.womenCount})\n`;
+            text += `⏱ 진행 시간: ${data.hours}시간 (총 ${data.schedule.length}경기)\n\n`;
+
+            text += `[ 📋 팀 명단 ]\n`;
+            data.teams.forEach((team, idx) => {
+                text += `■ 팀 ${getTeamLetter(idx)} (총 ${team.men.length + team.women.length}명)\n`;
+                text += `- 남: ${team.men.join(', ') || '없음'}\n`;
+                text += `- 여: ${team.women.join(', ') || '없음'}\n`;
+            });
+
+            text += `\n[ ⚽ 경기 스케줄 (10분 경기 / 2분 휴식) ]\n`;
+            data.schedule.forEach(m => {
+                text += `${m.matchNum}경기 : 팀 ${m.teamA} vs 팀 ${m.teamB}\n`;
+            });
+
+            try {
+                await navigator.clipboard.writeText(text);
+                alert("카카오톡 공유용 텍스트가 클립보드에 복사되었습니다!\n원하는 채팅방에 붙여넣기(Ctrl+V) 하세요.");
+            } catch (err) {
+                const textContainer = document.createElement('textarea');
+                textContainer.value = text;
+                document.body.appendChild(textContainer);
+                textContainer.select();
+                document.execCommand('copy');
+                document.body.removeChild(textContainer);
+                alert("텍스트가 복사되었습니다! 채팅방에 붙여넣기(Ctrl+V) 하세요.");
+            }
+        });
+
         document.getElementById('generateBtn').addEventListener('click', generateTeamsAndSchedule);
         document.getElementById('reGenerateBtn').addEventListener('click', generateTeamsAndSchedule);
 
-        // === [이력 저장 및 관리] ===
         document.getElementById('saveBtn').addEventListener('click', () => {
             if (!currentResultData) return;
             let history = JSON.parse(localStorage.getItem('soccer_history') || '[]');
@@ -452,7 +489,7 @@
                             <summary style="cursor:pointer; font-weight:bold; margin-bottom:10px;">상세 명단 및 스케줄 보기 🔽</summary>
                             <p><strong>팀 편성:</strong></p>
                             <ul>
-                                ${item.teams.map((t, idx) => `<li>팀 ${idx+1}: 남[${t.men.join(', ')}] 여[${t.women.join(', ')}]</li>`).join('')}
+                                ${item.teams.map((t, idx) => `<li>팀 ${getTeamLetter(idx)}: 남[${t.men.join(', ')}] 여[${t.women.join(', ')}]</li>`).join('')}
                             </ul>
                             <table>
                                 <tr><th>경기</th><th>시간</th><th>대진</th></tr>
