@@ -401,17 +401,7 @@
       </div>
     </section>
 
-    <div class="card form-card">
-      <p class="form-title">기록 백업</p>
-      <div class="form-row">
-        <button class="btn btn-ghost" id="exportBackupBtn">JSON 백업 저장</button>
-        <button class="btn btn-ghost" id="importBackupBtn">JSON 백업 가져오기</button>
-        <input type="file" id="importBackupFile" accept=".json,application/json" hidden>
-      </div>
-      <p class="form-hint">기록은 팀원 모두에게 공유됩니다. 저장할 때마다 GitHub에 JSON 변경 이력이 남습니다. JSON 파일로 별도 백업도 할 수 있습니다.</p>
-      <button class="btn btn-ghost" id="refreshSharedBtn">최신 기록 불러오기</button>
-      <p class="form-hint" id="githubBackupStatus" role="status">공동 기록 연결 중…</p>
-    </div>
+    <p class="note" id="githubBackupStatus" role="status">공동 기록 연결 중…</p>
     <p class="note" id="storageNote">이 브라우저에 기록을 저장합니다.</p>
   </main>
 
@@ -913,7 +903,7 @@
     let confirmedState = structuredClone(state);
     let savePassword = "";
     function sharedControls(disabled) {
-      ["addDateBtn", "addMemberBtn", "saveEditBtn", "deleteHistoryBtn", "deleteMemberBtn", "importBackupBtn"].forEach(id => $("#" + id).disabled = disabled);
+      ["addDateBtn", "addMemberBtn", "saveEditBtn", "deleteHistoryBtn", "deleteMemberBtn"].forEach(id => $("#" + id).disabled = disabled);
     }
     async function loadShared() {
       if (sharedBusy) return;
@@ -939,7 +929,7 @@
         sharedReady = false;
         $("#syncText").textContent = "연결 실패";
         $("#storageNote").textContent = "저장 서버에 연결되지 않았습니다. 표시된 기록은 이 브라우저에 보관된 사본입니다.";
-        $("#githubBackupStatus").textContent = error.message + " · 최신 기록 불러오기를 눌러 다시 연결해 주세요.";
+        $("#githubBackupStatus").textContent = error.message + " · 페이지를 새로고침해 다시 연결해 주세요.";
       } finally {
         sharedBusy = false;
         sharedControls(!sharedReady);
@@ -986,7 +976,6 @@
         sharedControls(!sharedReady);
       }
     }
-    $("#refreshSharedBtn").addEventListener("click", loadShared);
     window.addEventListener("unhandledrejection", event => {
       event.preventDefault();
       showToast(event.reason?.message || "저장 실패. 연결 상태를 확인해 주세요.");
@@ -1049,44 +1038,6 @@
       localStorage.setItem("lovebugfc-backup-2026-10-11-restored", "true");
       render();
     }
-
-    function exportBackup() {
-      const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `laundry-${dateKey(new Date())}.json`;
-      link.click();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-    }
-
-    $("#exportBackupBtn").addEventListener("click", exportBackup);
-    $("#importBackupBtn").addEventListener("click", () => $("#importBackupFile").click());
-    $("#importBackupFile").addEventListener("change", async (event) => {
-      try {
-        const file = event.target.files[0];
-        if (!file) return;
-        const data = JSON.parse(await file.text());
-        const object = (value) => value && typeof value === "object" && !Array.isArray(value);
-        if (!object(data.members) || !object(data.schedules) ||
-            !Object.values(data.members).every(member => object(member) && typeof member.name === "string" && member.name.trim()) ||
-            !Object.entries(data.schedules).every(([date, record]) => /^\d{4}-\d{2}-\d{2}$/.test(date) && dateKey(parseDate(date)) === date && object(record) && typeof record.name === "string" && record.name.trim())) {
-          throw new Error("세탁 기록 백업 형식이 아닙니다.");
-        }
-        if (!confirm(`기록 ${Object.keys(data.schedules).length}개, 명단 ${Object.keys(data.members).length}명으로 가져올까요? 현재 기록은 교체됩니다. 먼저 JSON 백업 저장을 권장합니다.`)) return;
-        localStorage.setItem(`${LOCAL_KEY}-before-restore`, JSON.stringify(state));
-        const restored = { version: 4, members: data.members, schedules: data.schedules };
-        localStorage.setItem(LOCAL_KEY, JSON.stringify(restored));
-        state = restored;
-        render();
-        await writeLocal();
-        showToast("백업을 가져왔어요");
-      } catch (error) {
-        alert(`백업을 가져오지 못했습니다: ${error.message}`);
-      } finally {
-        event.target.value = "";
-      }
-    });
 
     document.querySelectorAll(".tab").forEach((tab) => {
       tab.addEventListener("click", () => {
