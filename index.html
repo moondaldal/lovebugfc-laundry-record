@@ -408,20 +408,9 @@
         <button class="btn btn-ghost" id="importBackupBtn">JSON 백업 가져오기</button>
         <input type="file" id="importBackupFile" accept=".json,application/json" hidden>
       </div>
-      <p class="form-hint">기록은 이 브라우저에 저장됩니다. 다른 기기로 옮기거나 브라우저 데이터를 지우기 전에는 백업 파일을 저장해 주세요.</p>
-      <details>
-        <summary>GitHub 자동 백업 연결</summary>
-        <p class="form-hint">lovebugfc-laundry-backups 저장소에 변경마다 JSON 파일을 추가합니다. 이 저장소만 선택하고 Contents: Read and write 권한을 준 Fine-grained 토큰을 입력해 주세요. 토큰은 이 페이지를 닫거나 새로고침하면 지워집니다.</p>
-        <div class="form-row">
-          <input type="password" id="githubToken" placeholder="GitHub 백업 전용 토큰" autocomplete="off">
-          <button class="btn btn-ghost" id="connectGithubBtn">연결·백업</button>
-        </div>
-        <div class="form-row">
-          <button class="btn btn-ghost" id="retryGithubBtn">미전송 백업 재시도</button>
-          <button class="btn btn-ghost" id="disconnectGithubBtn">연결 해제</button>
-        </div>
-        <p class="form-hint" id="githubBackupStatus" role="status">GitHub 자동 백업 미연결</p>
-      </details>
+      <p class="form-hint">기록은 팀원 모두에게 공유됩니다. 저장할 때마다 GitHub에 JSON 변경 이력이 남습니다. JSON 파일로 별도 백업도 할 수 있습니다.</p>
+      <button class="btn btn-ghost" id="refreshSharedBtn">최신 기록 불러오기</button>
+      <p class="form-hint" id="githubBackupStatus" role="status">공동 기록 연결 중…</p>
     </div>
     <p class="note" id="storageNote">이 브라우저에 기록을 저장합니다.</p>
   </main>
@@ -917,77 +906,91 @@
       setDateField("newDate", dateKey(date));
     }
 
-    async function writeLocal() {
-      localStorage.setItem(LOCAL_KEY, JSON.stringify(state));
-      render();
-      queueGithubBackup();
+    const SHARED_API = "https://lovebugfc-laundry-api.mdhzzangu.workers.dev/state";
+    let sharedSha = null;
+    let sharedReady = false;
+    let sharedBusy = false;
+    let confirmedState = structuredClone(state);
+    let savePassword = "";
+    function sharedControls(disabled) {
+      ["addDateBtn", "addMemberBtn", "saveEditBtn", "deleteHistoryBtn", "deleteMemberBtn", "importBackupBtn"].forEach(id => $("#" + id).disabled = disabled);
     }
-
-    const GITHUB_QUEUE_KEY = "lovebugfc-github-backup-queue-v1";
-    let githubToken = "";
-    let githubSending = false;
-    function backupQueue() {
-      return JSON.parse(localStorage.getItem(GITHUB_QUEUE_KEY) || "[]");
-    }
-    function queueGithubBackup() {
+    async function loadShared() {
+      if (sharedBusy) return;
+      sharedBusy = true;
+      sharedControls(true);
+      $("#githubBackupStatus").textContent = "최신 공동 기록을 불러오는 중…";
       try {
-        const queue = backupQueue();
-        queue.push({ id: crypto.randomUUID(), created: new Date().toISOString(), data: structuredClone(state) });
-        localStorage.setItem(GITHUB_QUEUE_KEY, JSON.stringify(queue));
-        $("#githubBackupStatus").textContent = `GitHub 전송 대기 ${queue.length}개${githubToken ? "" : " · 토큰을 연결해 주세요"}`;
-        sendGithubBackups();
-      } catch {
-        $("#githubBackupStatus").textContent = "백업 대기열 저장 실패 · JSON 백업 저장 버튼으로 파일을 보관해 주세요.";
-      }
-    }
-    async function sendGithubBackups() {
-      if (githubSending || !githubToken) return;
-      githubSending = true;
-      try {
-        while (githubToken && backupQueue().length) {
-          const item = backupQueue()[0];
-          const filename = `record-${item.created.replace(/[:.]/g, "-")}-${item.id}.json`;
-          const bytes = new TextEncoder().encode(JSON.stringify(item.data, null, 2));
-          const content = btoa(Array.from(bytes, byte => String.fromCharCode(byte)).join(""));
-          const endpoint = `https://api.github.com/repos/moondaldal/lovebugfc-laundry-backups/contents/backups/${filename}`;
-          const headers = { Authorization: `Bearer ${githubToken}`, Accept: "application/vnd.github+json", "Content-Type": "application/json" };
-          $("#githubBackupStatus").textContent = `GitHub 백업 전송 중 · ${backupQueue().length}개`;
-          const response = await fetch(endpoint, {
-            method: "PUT", headers, signal: AbortSignal.timeout(20000),
-            body: JSON.stringify({ message: `세탁 기록 변경 백업 ${item.created}`, content, branch: "main" })
-          });
-          if (!response.ok) {
-            // A previous successful upload may have lost its response. Verify identical content before acknowledging it.
-            const existing = await fetch(`${endpoint}?ref=main`, { headers, signal: AbortSignal.timeout(20000) });
-            if (!existing.ok || (await existing.json()).content?.replace(/\s/g, "") !== content) {
-              throw new Error(`GitHub 응답 ${response.status}`);
-            }
-          }
-          localStorage.setItem(GITHUB_QUEUE_KEY, JSON.stringify(backupQueue().filter(entry => entry.id !== item.id)));
-          $("#githubBackupStatus").textContent = `GitHub 백업 완료 · ${new Date().toLocaleString("ko-KR")}`;
-        }
+        const response = await fetch(SHARED_API, { cache: "no-store", signal: AbortSignal.timeout(25000) });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || "공동 기록 연결 실패");
+        if (!result.data?.members || !result.data?.schedules) throw new Error("기록 데이터 형식 오류");
+        state = result.data;
+        confirmedState = structuredClone(state);
+        sharedSha = result.sha;
+        sharedReady = true;
+        localStorage.setItem(LOCAL_KEY, JSON.stringify(state));
+        render();
+        setSyncStatus("online");
+        $("#syncText").textContent = "팀 공동 기록";
+        $("#storageNote").textContent = "저장 시 팀 기록이 갱신되고 GitHub에 JSON 변경 이력이 남습니다.";
+        $("#githubBackupStatus").textContent = "최신 공동 기록 연결 완료";
       } catch (error) {
-        $("#githubBackupStatus").textContent = `GitHub 백업 실패 (${error.name === "Error" ? error.message : "네트워크 오류"}) · 미전송 기록은 보관되어 있습니다. 연결 후 재시도해 주세요.`;
+        sharedReady = false;
+        $("#syncText").textContent = "연결 실패";
+        $("#storageNote").textContent = "저장 서버에 연결되지 않았습니다. 표시된 기록은 이 브라우저에 보관된 사본입니다.";
+        $("#githubBackupStatus").textContent = error.message + " · 최신 기록 불러오기를 눌러 다시 연결해 주세요.";
       } finally {
-        githubSending = false;
+        sharedBusy = false;
+        sharedControls(!sharedReady);
       }
     }
-    $("#connectGithubBtn").addEventListener("click", () => {
-      githubToken = $("#githubToken").value.trim();
-      $("#githubToken").value = "";
-      if (!githubToken) return showToast("백업 전용 토큰을 입력해 주세요");
-      queueGithubBackup();
+    async function writeLocal() {
+      if (!sharedReady || sharedBusy) {
+        state = structuredClone(confirmedState);
+        render();
+        throw new Error("최신 공동 기록에 연결한 뒤 저장해 주세요.");
+      }
+      const attempted = structuredClone(state);
+      localStorage.setItem(LOCAL_KEY + "-unsaved", JSON.stringify(attempted));
+      if (!savePassword) savePassword = $("#editPassword").value || $("#memberPassword").value || prompt("팀 기록 저장 비밀번호를 입력해 주세요.") || "";
+      sharedBusy = true;
+      sharedControls(true);
+      $("#githubBackupStatus").textContent = "GitHub에 공동 기록 저장 중…";
+      try {
+        if (!savePassword) throw new Error("저장을 취소했습니다.");
+        const response = await fetch(SHARED_API, {
+          method: "PUT", headers: { "Content-Type": "application/json", "X-Edit-Password": savePassword },
+          body: JSON.stringify({ data: attempted, sha: sharedSha }), signal: AbortSignal.timeout(25000)
+        });
+        const result = await response.json();
+        if (!response.ok) {
+          if (response.status === 401) savePassword = "";
+          if (response.status === 409) sharedReady = false;
+          throw new Error(result.error || "저장 실패");
+        }
+        state = result.data;
+        sharedSha = result.sha;
+        confirmedState = structuredClone(state);
+        localStorage.setItem(LOCAL_KEY, JSON.stringify(state));
+        localStorage.removeItem(LOCAL_KEY + "-unsaved");
+        render();
+        $("#githubBackupStatus").textContent = "GitHub 저장·백업 완료 · " + new Date().toLocaleString("ko-KR");
+      } catch (error) {
+        state = structuredClone(confirmedState);
+        render();
+        $("#githubBackupStatus").textContent = error.message + " · 미저장 사본은 이 브라우저에 보관했습니다.";
+        throw error;
+      } finally {
+        sharedBusy = false;
+        sharedControls(!sharedReady);
+      }
+    }
+    $("#refreshSharedBtn").addEventListener("click", loadShared);
+    window.addEventListener("unhandledrejection", event => {
+      event.preventDefault();
+      showToast(event.reason?.message || "저장 실패. 연결 상태를 확인해 주세요.");
     });
-    $("#retryGithubBtn").addEventListener("click", () => {
-      if (!githubToken) return showToast("먼저 GitHub 토큰을 연결해 주세요");
-      sendGithubBackups();
-    });
-    $("#disconnectGithubBtn").addEventListener("click", () => {
-      githubToken = "";
-      $("#githubToken").value = "";
-      $("#githubBackupStatus").textContent = "GitHub 자동 백업 연결 해제 · 전송 대기 백업은 보관됩니다.";
-    });
-    window.addEventListener("online", sendGithubBackups);
 
     async function updateSchedule(date, item) {
         state.schedules[date] = item;
@@ -1076,7 +1079,7 @@
         localStorage.setItem(LOCAL_KEY, JSON.stringify(restored));
         state = restored;
         render();
-        queueGithubBackup();
+        await writeLocal();
         showToast("백업을 가져왔어요");
       } catch (error) {
         alert(`백업을 가져오지 못했습니다: ${error.message}`);
@@ -1148,6 +1151,8 @@
 
     render();
     activateLocal();
+    sharedControls(true);
+    loadShared();
   </script>
 </body>
 </html>
