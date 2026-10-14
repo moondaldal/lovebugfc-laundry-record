@@ -943,12 +943,13 @@
       }
       const attempted = structuredClone(state);
       localStorage.setItem(LOCAL_KEY + "-unsaved", JSON.stringify(attempted));
-      if (!savePassword) savePassword = $("#editPassword").value || $("#memberPassword").value || prompt("팀 기록 저장 비밀번호를 입력해 주세요.") || "";
+      const additionOnly = ["members", "schedules"].every(group => Object.entries(confirmedState[group]).every(([key, value]) => JSON.stringify(attempted[group][key]) === JSON.stringify(value)));
+      if (!additionOnly && !savePassword) savePassword = $("#editPassword").value || $("#memberPassword").value || prompt("기록 수정·삭제 비밀번호를 입력해 주세요.") || "";
       sharedBusy = true;
       sharedControls(true);
       $("#githubBackupStatus").textContent = "GitHub에 공동 기록 저장 중…";
       try {
-        if (!savePassword) throw new Error("저장을 취소했습니다.");
+        if (!additionOnly && !savePassword) throw new Error("저장을 취소했습니다.");
         const response = await fetch(SHARED_API, {
           method: "PUT", headers: { "Content-Type": "application/json", "X-Edit-Password": savePassword },
           body: JSON.stringify({ data: attempted, sha: sharedSha }), signal: AbortSignal.timeout(25000)
